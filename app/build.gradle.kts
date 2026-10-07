@@ -111,6 +111,14 @@ dependencies {
     )
 
     // =========================================================
+    // Google Location Services
+    // =========================================================
+
+    implementation(
+        "com.google.android.gms:play-services-location:21.4.0"
+    )
+
+    // =========================================================
     // Room
     // =========================================================
 
@@ -140,9 +148,13 @@ dependencies {
         "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2"
     )
 
-// =========================================================
-// Google Sign-In / Credential Manager
-// =========================================================
+    implementation(
+        "com.google.firebase:firebase-firestore"
+    )
+
+    // =========================================================
+    // Google Sign-In / Credential Manager
+    // =========================================================
 
     implementation(
         "androidx.credentials:credentials:1.3.0"
@@ -155,6 +167,7 @@ dependencies {
     implementation(
         "com.google.android.libraries.identity.googleid:googleid:1.1.1"
     )
+
     // =========================================================
     // Unit tests
     // =========================================================

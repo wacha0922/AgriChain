@@ -11,6 +11,8 @@ data class ProductEntity(
     @PrimaryKey
     val productId: String,
 
+    val farmerId: String,
+
     val productName: String,
 
     val cropType: String,

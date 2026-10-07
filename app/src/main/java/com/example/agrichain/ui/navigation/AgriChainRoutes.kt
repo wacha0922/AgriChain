@@ -2,90 +2,80 @@ package com.example.agrichain.ui.navigation
 
 object AgriChainRoutes {
 
-    // =========================================================
-    // Authentication / Entry
-    // =========================================================
-
     const val SPLASH = "splash"
-
     const val WELCOME = "welcome"
 
     const val SIGN_IN = "sign_in"
-
     const val SIGN_UP = "sign_up"
-
     const val VERIFY_PHONE = "verify_phone"
 
-    // =========================================================
-    // Farmer
-    // =========================================================
+    const val SIGN_IN_WITH_ROLE = "sign_in/{role}"
 
     const val FARMER_DASHBOARD = "farmer_dashboard"
-
     const val ADD_PRODUCT = "add_product"
 
     const val PRODUCT_CREATED = "product_created"
-
     const val PRODUCT_CREATED_WITH_ID =
-        "$PRODUCT_CREATED/{productId}"
+        "product_created/{productId}"
 
-    // =========================================================
-    // Other role dashboards
-    // =========================================================
+    const val PRODUCT_DETAILS =
+        "product_details"
 
-    const val TRANSPORTER_DASHBOARD = "transporter_dashboard"
+    const val PRODUCT_DETAILS_WITH_ID =
+        "product_details/{productId}"
 
-    const val PROCESSOR_DASHBOARD = "processor_dashboard"
+    const val PRODUCT_QR =
+        "product_qr"
 
-    const val RETAILER_DASHBOARD = "retailer_dashboard"
+    const val PRODUCT_QR_WITH_ID =
+        "product_qr/{productId}"
 
-    const val CONSUMER_DASHBOARD = "consumer_dashboard"
+    const val TRANSPORTER_DASHBOARD =
+        "transporter_dashboard"
 
-    const val GOVERNMENT_DASHBOARD = "government_dashboard"
+    const val PROCESSOR_DASHBOARD =
+        "processor_dashboard"
 
-    // =========================================================
-    // QR / Product Verification
-    // =========================================================
+    const val RETAILER_DASHBOARD =
+        "retailer_dashboard"
 
-    const val QR_SCANNER = "qr_scanner"
+    const val CONSUMER_DASHBOARD =
+        "consumer_dashboard"
 
-    const val PRODUCT_VERIFICATION = "product_verification"
+    const val GOVERNMENT_DASHBOARD =
+        "government_dashboard"
+
+    const val QR_SCANNER =
+        "qr_scanner"
+
+    const val PRODUCT_VERIFICATION =
+        "product_verification"
 
     const val PRODUCT_VERIFICATION_WITH_ID =
-        "$PRODUCT_VERIFICATION/{productId}"
+        "product_verification/{productId}"
 
-    // =========================================================
-    // Role-aware Sign In
-    // =========================================================
-
-    const val SIGN_IN_WITH_ROLE =
-        "$SIGN_IN/{role}"
 
     fun signIn(role: String): String {
-        return "$SIGN_IN/${role.encodeForNavigation()}"
+        return "sign_in/${encodeForNavigation(role)}"
     }
-
-    // =========================================================
-    // Product Created
-    // =========================================================
 
     fun productCreated(productId: String): String {
-        return "$PRODUCT_CREATED/${productId.encodeForNavigation()}"
+        return "$PRODUCT_CREATED/${encodeForNavigation(productId)}"
     }
 
-    // =========================================================
-    // Product Verification
-    // =========================================================
+    fun productDetails(productId: String): String {
+        return "$PRODUCT_DETAILS/${encodeForNavigation(productId)}"
+    }
+
+    fun productQr(productId: String): String {
+        return "$PRODUCT_QR/${encodeForNavigation(productId)}"
+    }
 
     fun productVerification(productId: String): String {
-        return "$PRODUCT_VERIFICATION/${productId.encodeForNavigation()}"
+        return "$PRODUCT_VERIFICATION/${encodeForNavigation(productId)}"
     }
 
-    // =========================================================
-    // Navigation-safe encoding
-    // =========================================================
-
-    private fun String.encodeForNavigation(): String {
-        return replace(" ", "_")
+    private fun encodeForNavigation(value: String): String {
+        return value.replace(" ", "_")
     }
 }

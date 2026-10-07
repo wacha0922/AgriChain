@@ -26,6 +26,8 @@ import com.example.agrichain.ui.screens.consumer.QrScannerScreen
 import com.example.agrichain.ui.screens.farmer.AddProductScreen
 import com.example.agrichain.ui.screens.farmer.FarmerDashboardScreen
 import com.example.agrichain.ui.screens.farmer.ProductCreatedScreen
+import com.example.agrichain.ui.screens.farmer.ProductDetailsScreen
+import com.example.agrichain.ui.screens.farmer.ProductQrScreen
 import com.example.agrichain.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.launch
 
@@ -33,6 +35,7 @@ import kotlinx.coroutines.launch
 fun AgriChainNavGraph(
     navController: NavHostController
 ) {
+
     val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
@@ -45,14 +48,12 @@ fun AgriChainNavGraph(
         GoogleAuthRepository(context)
     }
 
-    // =========================================================
-    // Helper: Navigate to the selected role dashboard
-    // =========================================================
-
     fun navigateToRoleDashboard(
         role: String
     ) {
+
         val destination = when (role) {
+
             "Farmer" ->
                 AgriChainRoutes.FARMER_DASHBOARD
 
@@ -76,6 +77,7 @@ fun AgriChainNavGraph(
         }
 
         navController.navigate(destination) {
+
             popUpTo(
                 AgriChainRoutes.SIGN_IN
             ) {
@@ -98,11 +100,14 @@ fun AgriChainNavGraph(
         composable(
             route = AgriChainRoutes.SPLASH
         ) {
+
             SplashScreen(
                 onSplashFinished = {
+
                     navController.navigate(
                         AgriChainRoutes.WELCOME
                     ) {
+
                         popUpTo(
                             AgriChainRoutes.SPLASH
                         ) {
@@ -114,12 +119,13 @@ fun AgriChainNavGraph(
         }
 
         // =========================================================
-        // WELCOME / ROLE SELECTION
+        // WELCOME
         // =========================================================
 
         composable(
             route = AgriChainRoutes.WELCOME
         ) {
+
             WelcomeScreen(
                 onRoleSelected = { selectedRole ->
 
@@ -163,14 +169,17 @@ fun AgriChainNavGraph(
                 mutableStateOf<String?>(null)
             }
 
-            // Read a success message returned from Sign Up.
             LaunchedEffect(Unit) {
+
                 val message =
                     navController.currentBackStackEntry
                         ?.savedStateHandle
-                        ?.get<String>("authSuccessMessage")
+                        ?.get<String>(
+                            "authSuccessMessage"
+                        )
 
                 if (!message.isNullOrBlank()) {
+
                     successMessage = message
 
                     navController.currentBackStackEntry
@@ -182,6 +191,7 @@ fun AgriChainNavGraph(
             }
 
             SignInScreen(
+
                 selectedRole = selectedRole,
 
                 isLoading = isLoading,
@@ -189,10 +199,6 @@ fun AgriChainNavGraph(
                 errorMessage = errorMessage,
 
                 successMessage = successMessage,
-
-                // -------------------------------------------------
-                // Email/password sign-in
-                // -------------------------------------------------
 
                 onSignIn = { email, password ->
 
@@ -226,10 +232,6 @@ fun AgriChainNavGraph(
                     }
                 },
 
-                // -------------------------------------------------
-                // Google sign-in
-                // -------------------------------------------------
-
                 onGoogleSignIn = {
 
                     errorMessage = null
@@ -260,31 +262,14 @@ fun AgriChainNavGraph(
                     }
                 },
 
-                // -------------------------------------------------
-                // Forgot password
-                // -------------------------------------------------
-
                 onForgotPassword = {
 
-                    errorMessage = null
-                    successMessage = null
-
-                    /*
-                     * The current SignInScreen does not expose
-                     * the entered email directly to this callback.
-                     *
-                     * Password-reset wiring will be completed
-                     * when we add a dedicated reset dialog/screen.
-                     */
                     errorMessage =
                         "Enter your email address and use password recovery. Password reset will be completed in the next authentication step."
                 },
 
-                // -------------------------------------------------
-                // Sign up
-                // -------------------------------------------------
-
                 onSignUp = {
+
                     navController.navigate(
                         AgriChainRoutes.SIGN_UP
                     )
@@ -301,6 +286,7 @@ fun AgriChainNavGraph(
         ) {
 
             SignUpScreen(
+
                 onBack = {
                     navController.popBackStack()
                 },
@@ -319,7 +305,7 @@ fun AgriChainNavGraph(
                                 password = password
                             )
 
-                        result.onSuccess { user ->
+                        result.onSuccess { _ ->
 
                             val verificationResult =
                                 authRepository
@@ -327,14 +313,6 @@ fun AgriChainNavGraph(
 
                             verificationResult
                                 .onSuccess {
-
-                                    /*
-                                     * The account exists and the
-                                     * verification email has been sent.
-                                     *
-                                     * Return to Sign In and show
-                                     * a clear success message.
-                                     */
 
                                     navController
                                         .previousBackStackEntry
@@ -344,17 +322,12 @@ fun AgriChainNavGraph(
                                             "Account created successfully. A verification email has been sent to $email."
                                         )
 
-                                    /*
-                                     * Remove the currently
-                                     * authenticated but unverified
-                                     * Firebase session before
-                                     * returning to Sign In.
-                                     */
                                     authRepository.signOut()
 
                                     navController.popBackStack()
 
-                                }.onFailure { exception ->
+                                }
+                                .onFailure { exception ->
 
                                     navController
                                         .currentBackStackEntry
@@ -380,13 +353,6 @@ fun AgriChainNavGraph(
                                 )
                         }
 
-                        /*
-                         * fullName and phone will be stored in the
-                         * Firestore user profile in the next step.
-                         *
-                         * We deliberately don't discard them:
-                         * this callback already receives them.
-                         */
                         println(
                             "Registration name: $fullName"
                         )
@@ -410,17 +376,25 @@ fun AgriChainNavGraph(
         composable(
             route = AgriChainRoutes.FARMER_DASHBOARD
         ) {
+
             FarmerDashboardScreen(
+
                 farmerName = "Farmer",
 
                 onAddProduct = {
+
                     navController.navigate(
                         AgriChainRoutes.ADD_PRODUCT
                     )
                 },
 
-                onProductSelected = {
-                    // Product details will be implemented later.
+                onProductSelected = { productId ->
+
+                    navController.navigate(
+                        AgriChainRoutes.productDetails(
+                            productId
+                        )
+                    )
                 }
             )
         }
@@ -432,7 +406,9 @@ fun AgriChainNavGraph(
         composable(
             route = AgriChainRoutes.ADD_PRODUCT
         ) {
+
             AddProductScreen(
+
                 onBack = {
                     navController.popBackStack()
                 },
@@ -457,7 +433,8 @@ fun AgriChainNavGraph(
                         harvestDate = harvestDate,
                         quantity = quantity,
                         quality = quality,
-                        cultivationMethod = cultivationMethod
+                        cultivationMethod =
+                            cultivationMethod
                     )
 
                     scope.launch {
@@ -481,7 +458,9 @@ fun AgriChainNavGraph(
         // =========================================================
 
         composable(
-            route = AgriChainRoutes.PRODUCT_CREATED_WITH_ID,
+            route =
+                AgriChainRoutes.PRODUCT_CREATED_WITH_ID,
+
             arguments = listOf(
                 navArgument("productId") {
                     type = NavType.StringType
@@ -512,11 +491,16 @@ fun AgriChainNavGraph(
             product?.let { currentProduct ->
 
                 ProductCreatedScreen(
+
                     product = currentProduct,
 
                     onGenerateQr = {
-                        // QR is generated inside
-                        // ProductCreatedScreen.
+
+                        navController.navigate(
+                            AgriChainRoutes.productQr(
+                                currentProduct.productId
+                            )
+                        )
                     },
 
                     onDone = {
@@ -524,6 +508,7 @@ fun AgriChainNavGraph(
                         navController.navigate(
                             AgriChainRoutes.FARMER_DASHBOARD
                         ) {
+
                             popUpTo(
                                 AgriChainRoutes.FARMER_DASHBOARD
                             ) {
@@ -538,18 +523,134 @@ fun AgriChainNavGraph(
         }
 
         // =========================================================
+        // PRODUCT DETAILS
+        // =========================================================
+
+        composable(
+            route =
+                AgriChainRoutes.PRODUCT_DETAILS_WITH_ID,
+
+            arguments = listOf(
+                navArgument("productId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+
+            val productId =
+                backStackEntry.arguments
+                    ?.getString("productId")
+
+            var product by remember {
+                mutableStateOf<Product?>(null)
+            }
+
+            LaunchedEffect(productId) {
+
+                if (!productId.isNullOrBlank()) {
+
+                    product =
+                        ProductRepository
+                            .getProductById(
+                                productId
+                            )
+                }
+            }
+
+            product?.let { currentProduct ->
+
+                ProductDetailsScreen(
+
+                    product = currentProduct,
+
+                    onBack = {
+                        navController.popBackStack()
+                    },
+
+                    onGenerateQr = {
+
+                        navController.navigate(
+                            AgriChainRoutes.productQr(
+                                currentProduct.productId
+                            )
+                        )
+                    },
+
+                    onVerifyProduct = {
+
+                        navController.navigate(
+                            AgriChainRoutes.productVerification(
+                                currentProduct.productId
+                            )
+                        )
+                    }
+                )
+            }
+        }
+
+        // =========================================================
+        // PRODUCT QR
+        // =========================================================
+
+        composable(
+            route =
+                AgriChainRoutes.PRODUCT_QR_WITH_ID,
+
+            arguments = listOf(
+                navArgument("productId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+
+            val productId =
+                backStackEntry.arguments
+                    ?.getString("productId")
+
+            var product by remember {
+                mutableStateOf<Product?>(null)
+            }
+
+            LaunchedEffect(productId) {
+
+                if (!productId.isNullOrBlank()) {
+
+                    product =
+                        ProductRepository
+                            .getProductById(
+                                productId
+                            )
+                }
+            }
+
+            product?.let { currentProduct ->
+
+                ProductQrScreen(
+
+                    productId =
+                        currentProduct.productId,
+
+                    productName =
+                        currentProduct.productName,
+
+                    onBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        // =========================================================
         // CONSUMER DASHBOARD
         // =========================================================
 
-        /*
-         * Current prototype:
-         * Consumer dashboard opens QR scanner directly.
-         */
-
         composable(
-            route = AgriChainRoutes.CONSUMER_DASHBOARD
+            route =
+                AgriChainRoutes.CONSUMER_DASHBOARD
         ) {
+
             QrScannerScreen(
+
                 onBack = {
                     navController.popBackStack()
                 },
@@ -568,10 +669,9 @@ fun AgriChainNavGraph(
                         if (product != null) {
 
                             navController.navigate(
-                                AgriChainRoutes
-                                    .productVerification(
-                                        product.productId
-                                    )
+                                AgriChainRoutes.productVerification(
+                                    product.productId
+                                )
                             )
                         }
                     }
@@ -586,7 +686,9 @@ fun AgriChainNavGraph(
         composable(
             route = AgriChainRoutes.QR_SCANNER
         ) {
+
             QrScannerScreen(
+
                 onBack = {
                     navController.popBackStack()
                 },
@@ -605,10 +707,9 @@ fun AgriChainNavGraph(
                         if (product != null) {
 
                             navController.navigate(
-                                AgriChainRoutes
-                                    .productVerification(
-                                        product.productId
-                                    )
+                                AgriChainRoutes.productVerification(
+                                    product.productId
+                                )
                             )
                         }
                     }
@@ -655,6 +756,7 @@ fun AgriChainNavGraph(
             product?.let { currentProduct ->
 
                 ProductVerificationScreen(
+
                     product = currentProduct,
 
                     onScanAnother = {
@@ -662,6 +764,7 @@ fun AgriChainNavGraph(
                         navController.navigate(
                             AgriChainRoutes.QR_SCANNER
                         ) {
+
                             popUpTo(
                                 AgriChainRoutes
                                     .PRODUCT_VERIFICATION_WITH_ID
@@ -679,38 +782,34 @@ fun AgriChainNavGraph(
         }
 
         // =========================================================
-        // OTHER ROLE DASHBOARDS
+        // OTHER DASHBOARDS
         // =========================================================
 
         composable(
-            route = AgriChainRoutes.TRANSPORTER_DASHBOARD
+            route =
+                AgriChainRoutes.TRANSPORTER_DASHBOARD
         ) {
-            // Transporter Dashboard will be implemented next.
         }
 
         composable(
-            route = AgriChainRoutes.PROCESSOR_DASHBOARD
+            route =
+                AgriChainRoutes.PROCESSOR_DASHBOARD
         ) {
-            // Processor Dashboard will be implemented next.
         }
 
         composable(
-            route = AgriChainRoutes.RETAILER_DASHBOARD
+            route =
+                AgriChainRoutes.RETAILER_DASHBOARD
         ) {
-            // Retailer Dashboard will be implemented next.
         }
 
         composable(
-            route = AgriChainRoutes.GOVERNMENT_DASHBOARD
+            route =
+                AgriChainRoutes.GOVERNMENT_DASHBOARD
         ) {
-            // Government Dashboard will be implemented next.
         }
     }
 }
-
-// =============================================================
-// Firebase authentication error translation
-// =============================================================
 
 private fun getAuthErrorMessage(
     exception: Throwable
