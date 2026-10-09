@@ -64,6 +64,7 @@ object ProductRepository {
                     .addMigrations(
                         AgriChainDatabase.MIGRATION_1_2
                     )
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
         }
     }

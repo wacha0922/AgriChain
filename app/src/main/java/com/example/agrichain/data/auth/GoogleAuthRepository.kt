@@ -34,7 +34,7 @@ class GoogleAuthRepository(
                     .setServerClientId(
                         context.getString(
                             R.string.default_web_client_id
-                        )
+                        ).trim()
                     )
                     .setFilterByAuthorizedAccounts(false)
                     .build()

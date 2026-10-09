@@ -1,7 +1,4 @@
 <resources>
     <string name="app_name">AgriChain</string>
-    <string
-        name="default_web_client_id">
-    793253420267-sjp05i0ad887s7us450v5csgpsl69e74.apps.googleusercontent.com
-</string>
+    <string name="default_web_client_id">793253420267-sjp05i0ad887s7us450v5csgpsl69e74.apps.googleusercontent.com</string>
 </resources>

@@ -172,9 +172,7 @@ dependencies {
     // Unit tests
     // =========================================================
 
-    testImplementation(
-        libs.junit
-    )
+    testImplementation(libs.junit)
 
     // =========================================================
     // Debug

@@ -1,5 +1,11 @@
 package com.example.agrichain.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -7,7 +13,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -15,7 +24,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.agrichain.data.auth.FirebaseAuthRepository
 import com.example.agrichain.data.auth.GoogleAuthRepository
+import com.example.agrichain.data.model.BlockchainStatus
 import com.example.agrichain.data.model.Product
+import com.example.agrichain.data.model.ProductStatus
 import com.example.agrichain.data.repository.ProductRepository
 import com.example.agrichain.data.util.ProductIdGenerator
 import com.example.agrichain.ui.screens.auth.SignInScreen
@@ -23,8 +34,10 @@ import com.example.agrichain.ui.screens.auth.SignUpScreen
 import com.example.agrichain.ui.screens.auth.WelcomeScreen
 import com.example.agrichain.ui.screens.consumer.ProductVerificationScreen
 import com.example.agrichain.ui.screens.consumer.QrScannerScreen
+import com.example.agrichain.ui.screens.dashboard.RoleDashboardScreen
 import com.example.agrichain.ui.screens.farmer.AddProductScreen
 import com.example.agrichain.ui.screens.farmer.FarmerDashboardScreen
+import com.example.agrichain.ui.screens.farmer.FarmerProductPreview
 import com.example.agrichain.ui.screens.farmer.ProductCreatedScreen
 import com.example.agrichain.ui.screens.farmer.ProductDetailsScreen
 import com.example.agrichain.ui.screens.farmer.ProductQrScreen
@@ -85,6 +98,14 @@ fun AgriChainNavGraph(
             }
 
             launchSingleTop = true
+        }
+    }
+
+    fun safeNavigateBack() {
+        if (!navController.popBackStack()) {
+            navController.navigate(AgriChainRoutes.WELCOME) {
+                popUpTo(0) { inclusive = true }
+            }
         }
     }
 
@@ -288,7 +309,7 @@ fun AgriChainNavGraph(
             SignUpScreen(
 
                 onBack = {
-                    navController.popBackStack()
+                    safeNavigateBack()
                 },
 
                 onCreateAccount = {
@@ -324,7 +345,7 @@ fun AgriChainNavGraph(
 
                                     authRepository.signOut()
 
-                                    navController.popBackStack()
+                                    safeNavigateBack()
 
                                 }
                                 .onFailure { exception ->
@@ -352,19 +373,11 @@ fun AgriChainNavGraph(
                                     )
                                 )
                         }
-
-                        println(
-                            "Registration name: $fullName"
-                        )
-
-                        println(
-                            "Registration phone: $phone"
-                        )
                     }
                 },
 
                 onSignIn = {
-                    navController.popBackStack()
+                    safeNavigateBack()
                 }
             )
         }
@@ -377,9 +390,35 @@ fun AgriChainNavGraph(
             route = AgriChainRoutes.FARMER_DASHBOARD
         ) {
 
+            var products by remember {
+                mutableStateOf<List<Product>>(emptyList())
+            }
+
+            LaunchedEffect(Unit) {
+                products = ProductRepository.getProductsForCurrentFarmer().ifEmpty {
+                    ProductRepository.getAllProducts()
+                }
+            }
+
             FarmerDashboardScreen(
 
-                farmerName = "Farmer",
+                farmerName = authRepository.getCurrentUser()?.displayName?.ifBlank { "Farmer" } ?: "Farmer",
+
+                activeLots = products.count { it.status == ProductStatus.CREATED || it.status == ProductStatus.HARVESTED },
+
+                inTransit = products.count { it.status == ProductStatus.IN_TRANSIT },
+
+                verifiedLots = products.count { it.blockchainStatus == BlockchainStatus.CONFIRMED },
+
+                recentProducts = products.map { p ->
+                    FarmerProductPreview(
+                        productId = p.productId,
+                        name = p.productName,
+                        cropType = p.cropType,
+                        quantity = p.quantity,
+                        status = p.status.name.replace("_", " ")
+                    )
+                },
 
                 onAddProduct = {
 
@@ -410,7 +449,7 @@ fun AgriChainNavGraph(
             AddProductScreen(
 
                 onBack = {
-                    navController.popBackStack()
+                    safeNavigateBack()
                 },
 
                 onProductCreated = {
@@ -476,6 +515,10 @@ fun AgriChainNavGraph(
                 mutableStateOf<Product?>(null)
             }
 
+            var isLoading by remember {
+                mutableStateOf(true)
+            }
+
             LaunchedEffect(productId) {
 
                 if (!productId.isNullOrBlank()) {
@@ -486,39 +529,57 @@ fun AgriChainNavGraph(
                                 productId
                             )
                 }
+
+                isLoading = false
             }
 
-            product?.let { currentProduct ->
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                product?.let { currentProduct ->
 
-                ProductCreatedScreen(
+                    ProductCreatedScreen(
 
-                    product = currentProduct,
+                        product = currentProduct,
 
-                    onGenerateQr = {
+                        onGenerateQr = {
 
-                        navController.navigate(
-                            AgriChainRoutes.productQr(
-                                currentProduct.productId
+                            navController.navigate(
+                                AgriChainRoutes.productQr(
+                                    currentProduct.productId
+                                )
                             )
-                        )
-                    },
+                        },
 
-                    onDone = {
+                        onDone = {
 
-                        navController.navigate(
-                            AgriChainRoutes.FARMER_DASHBOARD
-                        ) {
-
-                            popUpTo(
+                            navController.navigate(
                                 AgriChainRoutes.FARMER_DASHBOARD
                             ) {
-                                inclusive = false
-                            }
 
-                            launchSingleTop = true
+                                popUpTo(
+                                    AgriChainRoutes.FARMER_DASHBOARD
+                                ) {
+                                    inclusive = false
+                                }
+
+                                launchSingleTop = true
+                            }
                         }
+                    )
+                } ?: run {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Product not found.")
                     }
-                )
+                }
             }
         }
 
@@ -545,6 +606,10 @@ fun AgriChainNavGraph(
                 mutableStateOf<Product?>(null)
             }
 
+            var isLoading by remember {
+                mutableStateOf(true)
+            }
+
             LaunchedEffect(productId) {
 
                 if (!productId.isNullOrBlank()) {
@@ -555,36 +620,54 @@ fun AgriChainNavGraph(
                                 productId
                             )
                 }
+
+                isLoading = false
             }
 
-            product?.let { currentProduct ->
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                product?.let { currentProduct ->
 
-                ProductDetailsScreen(
+                    ProductDetailsScreen(
 
-                    product = currentProduct,
+                        product = currentProduct,
 
-                    onBack = {
-                        navController.popBackStack()
-                    },
+                        onBack = {
+                            safeNavigateBack()
+                        },
 
-                    onGenerateQr = {
+                        onGenerateQr = {
 
-                        navController.navigate(
-                            AgriChainRoutes.productQr(
-                                currentProduct.productId
+                            navController.navigate(
+                                AgriChainRoutes.productQr(
+                                    currentProduct.productId
+                                )
                             )
-                        )
-                    },
+                        },
 
-                    onVerifyProduct = {
+                        onVerifyProduct = {
 
-                        navController.navigate(
-                            AgriChainRoutes.productVerification(
-                                currentProduct.productId
+                            navController.navigate(
+                                AgriChainRoutes.productVerification(
+                                    currentProduct.productId
+                                )
                             )
-                        )
+                        }
+                    )
+                } ?: run {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Product details unavailable.")
                     }
-                )
+                }
             }
         }
 
@@ -623,21 +706,18 @@ fun AgriChainNavGraph(
                 }
             }
 
-            product?.let { currentProduct ->
+            ProductQrScreen(
 
-                ProductQrScreen(
+                productId =
+                    productId ?: currentProductOrEmpty(product),
 
-                    productId =
-                        currentProduct.productId,
+                productName =
+                    product?.productName ?: "Agricultural Product",
 
-                    productName =
-                        currentProduct.productName,
-
-                    onBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
+                onBack = {
+                    safeNavigateBack()
+                }
+            )
         }
 
         // =========================================================
@@ -652,7 +732,7 @@ fun AgriChainNavGraph(
             QrScannerScreen(
 
                 onBack = {
-                    navController.popBackStack()
+                    safeNavigateBack()
                 },
 
                 onProductFound = {
@@ -690,7 +770,7 @@ fun AgriChainNavGraph(
             QrScannerScreen(
 
                 onBack = {
-                    navController.popBackStack()
+                    safeNavigateBack()
                 },
 
                 onProductFound = {
@@ -741,6 +821,10 @@ fun AgriChainNavGraph(
                 mutableStateOf<Product?>(null)
             }
 
+            var isLoading by remember {
+                mutableStateOf(true)
+            }
+
             LaunchedEffect(productId) {
 
                 if (!productId.isNullOrBlank()) {
@@ -751,33 +835,51 @@ fun AgriChainNavGraph(
                                 productId
                             )
                 }
+
+                isLoading = false
             }
 
-            product?.let { currentProduct ->
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                product?.let { currentProduct ->
 
-                ProductVerificationScreen(
+                    ProductVerificationScreen(
 
-                    product = currentProduct,
+                        product = currentProduct,
 
-                    onScanAnother = {
+                        onScanAnother = {
 
-                        navController.navigate(
-                            AgriChainRoutes.QR_SCANNER
-                        ) {
-
-                            popUpTo(
-                                AgriChainRoutes
-                                    .PRODUCT_VERIFICATION_WITH_ID
+                            navController.navigate(
+                                AgriChainRoutes.QR_SCANNER
                             ) {
-                                inclusive = true
-                            }
-                        }
-                    },
 
-                    onDone = {
-                        navController.popBackStack()
+                                popUpTo(
+                                    AgriChainRoutes
+                                        .PRODUCT_VERIFICATION_WITH_ID
+                                ) {
+                                    inclusive = true
+                                }
+                            }
+                        },
+
+                        onDone = {
+                            safeNavigateBack()
+                        }
+                    )
+                } ?: run {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Verification record unavailable.")
                     }
-                )
+                }
             }
         }
 
@@ -789,26 +891,154 @@ fun AgriChainNavGraph(
             route =
                 AgriChainRoutes.TRANSPORTER_DASHBOARD
         ) {
+            var products by remember {
+                mutableStateOf<List<Product>>(emptyList())
+            }
+
+            LaunchedEffect(Unit) {
+                products = ProductRepository.getAllProducts()
+            }
+
+            RoleDashboardScreen(
+                roleTitle = "Transporter",
+                roleIcon = "🚚",
+                roleDescription = "Logistics & Transport Records",
+                products = products,
+                onScanQr = {
+                    navController.navigate(AgriChainRoutes.QR_SCANNER)
+                },
+                onProductSelected = { productId ->
+                    navController.navigate(AgriChainRoutes.productDetails(productId))
+                },
+                onSwitchRole = {
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onSignOut = {
+                    authRepository.signOut()
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(
             route =
                 AgriChainRoutes.PROCESSOR_DASHBOARD
         ) {
+            var products by remember {
+                mutableStateOf<List<Product>>(emptyList())
+            }
+
+            LaunchedEffect(Unit) {
+                products = ProductRepository.getAllProducts()
+            }
+
+            RoleDashboardScreen(
+                roleTitle = "Processor",
+                roleIcon = "🏭",
+                roleDescription = "Processing & Quality Compliance",
+                products = products,
+                onScanQr = {
+                    navController.navigate(AgriChainRoutes.QR_SCANNER)
+                },
+                onProductSelected = { productId ->
+                    navController.navigate(AgriChainRoutes.productDetails(productId))
+                },
+                onSwitchRole = {
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onSignOut = {
+                    authRepository.signOut()
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(
             route =
                 AgriChainRoutes.RETAILER_DASHBOARD
         ) {
+            var products by remember {
+                mutableStateOf<List<Product>>(emptyList())
+            }
+
+            LaunchedEffect(Unit) {
+                products = ProductRepository.getAllProducts()
+            }
+
+            RoleDashboardScreen(
+                roleTitle = "Retailer",
+                roleIcon = "🏪",
+                roleDescription = "Retail Inventory & Provenance",
+                products = products,
+                onScanQr = {
+                    navController.navigate(AgriChainRoutes.QR_SCANNER)
+                },
+                onProductSelected = { productId ->
+                    navController.navigate(AgriChainRoutes.productDetails(productId))
+                },
+                onSwitchRole = {
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onSignOut = {
+                    authRepository.signOut()
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(
             route =
                 AgriChainRoutes.GOVERNMENT_DASHBOARD
         ) {
+            var products by remember {
+                mutableStateOf<List<Product>>(emptyList())
+            }
+
+            LaunchedEffect(Unit) {
+                products = ProductRepository.getAllProducts()
+            }
+
+            RoleDashboardScreen(
+                roleTitle = "Government",
+                roleIcon = "🏛️",
+                roleDescription = "Regulatory & Supply Supervision",
+                products = products,
+                onScanQr = {
+                    navController.navigate(AgriChainRoutes.QR_SCANNER)
+                },
+                onProductSelected = { productId ->
+                    navController.navigate(AgriChainRoutes.productDetails(productId))
+                },
+                onSwitchRole = {
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onSignOut = {
+                    authRepository.signOut()
+                    navController.navigate(AgriChainRoutes.WELCOME) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
+}
+
+private fun currentProductOrEmpty(product: Product?): String {
+    return product?.productId ?: ""
 }
 
 private fun getAuthErrorMessage(

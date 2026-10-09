@@ -76,6 +76,6 @@ object AgriChainRoutes {
     }
 
     private fun encodeForNavigation(value: String): String {
-        return value.replace(" ", "_")
+        return android.net.Uri.encode(value)
     }
 }
